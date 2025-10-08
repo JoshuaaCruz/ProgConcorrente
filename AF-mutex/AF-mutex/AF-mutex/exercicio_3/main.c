@@ -10,26 +10,27 @@ pthread_mutex_t gMtx;
 void imprimir_resultados(int n, int** results);
 
 // Função escrita por um engenheiro
-void compute(int arg) {
+int compute(int arg) {
+    int counterThread = 0;
     if (arg < 2) {
-        pthread_mutex_lock(&gMtx);
-        gValue += arg;
-        pthread_mutex_unlock(&gMtx);
+        //pthread_mutex_lock(&gMtx);
+        counterThread += arg;
+        //pthread_mutex_unlock(&gMtx);
     } else {
         compute(arg - 1);
         compute(arg - 2);
     }
+    return counterThread;
 }
 
 // Função wrapper que pode ser usada com pthread_create() para criar uma 
 // thread que retorna o resultado de compute(arg
 void* compute_thread(void* arg) {
     int* ret = malloc(sizeof(int));
-    pthread_mutex_lock(&gMtx);
-    gValue = 0;
-    compute(*((int*)arg));
-    *ret = gValue;
-    pthread_mutex_unlock(&gMtx);
+    //pthread_mutex_lock(&gMtx);
+    //gValue = 0;
+    *ret =compute(*((int*)arg));
+    //pthread_mutex_unlock(&gMtx);
     return ret;
 }
 
@@ -47,8 +48,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    //Inicializa o mutex
-    pthread_mutex_init(&gMtx, NULL);
+    //pthread_mutexattr_t Jatrb;
+    //pthread_mutexattr_init(&Jatrb);
+//
+    //pthread_mutexattr_settype(&Jatrb, PTHREAD_MUTEX_RECURSIVE);
+//
+    ////Inicializa o mutex
+    //pthread_mutex_init(&gMtx, Jatrb);
 
     int args[n_threads];
     int* results[n_threads];
