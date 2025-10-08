@@ -41,17 +41,25 @@ void * matrix_mult_worker(void *arg) {
         minha_coluna = coluna_atual;
 
         coluna_atual += 1;
+
         if (coluna_atual >= tamanho_matriz) {
             coluna_atual = 0;
             linha_atual += 1;
         }
 
-        if (minha_linha >= tamanho_matriz)  
+        if (minha_linha >= tamanho_matriz)
             break;
 
+	// Se mutex fora do loop, o lock será executado n_thread vezes
+	// Se mutex dentro do loop, o lock será executado n_threads * tamanho_matrix vezes
+	// tamanho_matriz, do momento que é declarado no main.c, não é mais alterada, permanecendo efetivamente final. Logo, tamanho_matriz não precisa ser sincronizada.
+	pthread_mutex_lock(&matrix_mutex);
         for (i = 0; i < tamanho_matriz; i++) {
+	    // Início seção crítica
             resultado[minha_linha][minha_coluna] += matriz1[minha_linha][i] * matriz2[i][minha_coluna];
-        }
+	    // Fim seção crítica 
+	}
+	pthread_mutex_unlock(&matrix_mutex);
     }
 
     return NULL;
