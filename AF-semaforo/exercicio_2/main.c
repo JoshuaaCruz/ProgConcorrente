@@ -26,8 +26,12 @@ int veiculos_turno;
 
 // ToDo: Adicione aque quaisquer outras variávels globais necessárias.
 
-sem_t semContinente;
-sem_t semIlha;
+ sem_t semContinente;
+ sem_t semIlha;
+
+pthread_mutex_t mutexCaeatano;
+
+
 /* ---------------------------------------- */
 
 
@@ -35,6 +39,9 @@ sem_t semIlha;
 void ponte_inicializar() {
 	
 	// ToDo: IMPLEMENTAR!
+
+	sem_init(&semContinente, 0, veiculos_turno);
+	sem_init(&semIlha, 0, 0);
 
 	/* Imprime direção inicial da travessia. NÃO REMOVER! */
 	printf("\n[PONTE] *** Novo sentido da travessia: CONTINENTE -> ILHA. ***\n\n");
@@ -46,6 +53,18 @@ void ponte_entrar(veiculo_t *v) {
 	
 	//dá wait no semaf 
 
+	if (v->cabeceira == ILHA)
+	{
+		sem_wait(&semIlha);
+	} else{
+		sem_wait(&semContinente);
+	}
+
+
+	//wait no semaforo
+
+	//se sentido correto, passa semaforo unico?
+
 	// ToDo: IMPLEMENTAR!
 }
 
@@ -54,11 +73,44 @@ void ponte_sair(veiculo_t *v) {
 
 	// ToDo: IMPLEMENTAR!
 
+	//cada thread dá um post no semaforo contrario
 
+	if (v->cabeceira == ILHA)
+	{
+		sem_post(&semIlha);
+
+		sem_t semAtual = semContinente;
+	} else{
+		sem_post(&semContinente);
+
+		sem_t semAtual = semIlha;
+	}
+
+	//troca sentido quando todos os veiculos saíram do sentido atual
+
+	if (v->cabeceira == ILHA)
+	{
+		if (sem_getvalue(&semIlha, NULL) == 0);
+		{
 	/* Você deverá imprimir a nova direção da travessia quando for necessário! */	
 	printf("\n[PONTE] *** Novo sentido da travessia: %s -> %s. ***\n\n", cabeceiras[v->cabeceira], cabeceiras[!v->cabeceira]);
 	fflush(stdout);
 }
+		
+		
+	} else{
+		sem_post(&semContinente);
+
+		if (sem_getvalue(&semIlha, NULL) == 0);
+		{
+	/* Você deverá imprimir a nova direção da travessia quando for necessário! */	
+	printf("\n[PONTE] *** Novo sentido da travessia: %s -> %s. ***\n\n", cabeceiras[v->cabeceira], cabeceiras[!v->cabeceira]);
+	fflush(stdout);
+}
+	}
+}
+
+	
 
 /* FINALIZA a ponte. */
 void ponte_finalizar() {
@@ -67,7 +119,7 @@ void ponte_finalizar() {
 
 	sem_destroy(&semContinente);
 	sem_destroy(&semIlha);
-	
+
 	/* Imprime fim da execução! */
 	printf("[PONTE] FIM!\n\n");
 	fflush(stdout);
@@ -79,6 +131,7 @@ void * veiculo_executa(void *arg) {
 	
 	printf("[Veiculo %3d] Aguardando para entrar na ponte pelo(a) %s.\n", v->id, cabeceiras[v->cabeceira]);
 	fflush(stdout);
+
 
 	/* Entra na ponte. */
 	ponte_entrar(v);
@@ -120,6 +173,8 @@ int main(int argc, char **argv) {
 	veiculo_t veiculos[total_veiculos];
 
 	ponte_inicializar();
+
+	pthread_mutex_init(&mutexCaeatano, NULL);
 
 	/* Cria os veículos. */
 	for (int i = 0; i < total_veiculos; i++) {
