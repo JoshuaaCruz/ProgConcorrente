@@ -31,6 +31,8 @@ int veiculos_turno;
 
 pthread_mutex_t mutexCaeatano;
 
+char cabeceiraAtual = CONTINENTE;
+
 
 /* ---------------------------------------- */
 
@@ -39,9 +41,10 @@ pthread_mutex_t mutexCaeatano;
 void ponte_inicializar() {
 	
 	// ToDo: IMPLEMENTAR!
-
+	pthread_mutex_init(&mutexCaeatano, NULL);
 	sem_init(&semContinente, 0, veiculos_turno);
 	sem_init(&semIlha, 0, 0);
+
 
 	/* Imprime direção inicial da travessia. NÃO REMOVER! */
 	printf("\n[PONTE] *** Novo sentido da travessia: CONTINENTE -> ILHA. ***\n\n");
@@ -53,13 +56,26 @@ void ponte_entrar(veiculo_t *v) {
 	
 	//dá wait no semaf 
 
-	if (v->cabeceira == ILHA)
-	{
-		sem_wait(&semIlha);
-	} else{
-		sem_wait(&semContinente);
-	}
 
+	if (v->cabeceira == ILHA)
+	{	
+		if (cabeceiraAtual != ILHA)
+		{
+			pthread_mutex_lock(&mutexCaeatano);	
+		}
+		
+		sem_wait(&semIlha);
+
+	} else{
+
+		if (cabeceiraAtual != CONTINENTE)
+		{
+			pthread_mutex_lock(&mutexCaeatano);	
+		}
+		
+		sem_wait(&semContinente);
+	
+	}
 
 	//wait no semaforo
 
@@ -73,41 +89,31 @@ void ponte_sair(veiculo_t *v) {
 
 	// ToDo: IMPLEMENTAR!
 
-	//cada thread dá um post no semaforo contrario
+	int semafValue = 0;
 
+	//cada thread dá um post no semaforo contrario
 	if (v->cabeceira == ILHA)
 	{
 		sem_post(&semIlha);
-
-		sem_t semAtual = semContinente;
+		sem_getvalue(&semIlha, &semafValue);
 	} else{
 		sem_post(&semContinente);
-
-		sem_t semAtual = semIlha;
+		sem_getvalue(&semContinente, &semafValue);
 	}
 
 	//troca sentido quando todos os veiculos saíram do sentido atual
 
-	if (v->cabeceira == ILHA)
-	{
-		if (sem_getvalue(&semIlha, NULL) == 0);
-		{
-	/* Você deverá imprimir a nova direção da travessia quando for necessário! */	
-	printf("\n[PONTE] *** Novo sentido da travessia: %s -> %s. ***\n\n", cabeceiras[v->cabeceira], cabeceiras[!v->cabeceira]);
-	fflush(stdout);
-}
-		
-		
-	} else{
-		sem_post(&semContinente);
+	//se ele é o último do sentido dele ele dá unlock
 
-		if (sem_getvalue(&semIlha, NULL) == 0);
-		{
-	/* Você deverá imprimir a nova direção da travessia quando for necessário! */	
-	printf("\n[PONTE] *** Novo sentido da travessia: %s -> %s. ***\n\n", cabeceiras[v->cabeceira], cabeceiras[!v->cabeceira]);
-	fflush(stdout);
-}
-	}
+	printf("Valor semaforo: %d\n", semafValue);
+
+	if ( semafValue == 0){
+		pthread_mutex_unlock(&mutexCaeatano);
+		
+		/* Você deverá imprimir a nova direção da travessia quando for necessário! */	
+		printf("\n[PONTE] *** Novo sentido da travessia: %s -> %s. ***\n\n", cabeceiras[v->cabeceira], cabeceiras[!v->cabeceira]);
+		fflush(stdout);
+		}
 }
 
 	
@@ -119,6 +125,8 @@ void ponte_finalizar() {
 
 	sem_destroy(&semContinente);
 	sem_destroy(&semIlha);
+
+	pthread_mutex_destroy(&mutexCaeatano);
 
 	/* Imprime fim da execução! */
 	printf("[PONTE] FIM!\n\n");
