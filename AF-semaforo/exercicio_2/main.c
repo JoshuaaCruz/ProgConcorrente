@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-//CAETANO
 /* ---------- Definições Globais. ---------- */
 #define TEMPO_BASE 1000000
 
@@ -26,48 +25,46 @@ int total_veiculos;
 int veiculos_turno;
 
 // ToDo: Adicione aque quaisquer outras variávels globais necessárias.
+
+ sem_t semContinente;
+ sem_t semIlha;
+
+pthread_mutex_t mutexCaeatano;
+
+int contadorSaida = 0;
+
+
 /* ---------------------------------------- */
 
-sem_t semPonte;
-
-sem_t semBin;
-
-pthread_mutex_t mutexPonte;
-
-
-
-char sentidoAtual;
 
 /* Inicializa a ponte. */
 void ponte_inicializar() {
 	
 	// ToDo: IMPLEMENTAR!
+	pthread_mutex_init(&mutexCaeatano, NULL);
+	sem_init(&semContinente, 0, veiculos_turno);
+	sem_init(&semIlha, 0, 0);
 
-	sem_init(&semPonte, NULL, veiculos_turno);
-	sem_init(&semBin, NULL, 0);
-
-	pthread_mutex_init(&mutexPonte, NULL);
 
 	/* Imprime direção inicial da travessia. NÃO REMOVER! */
 	printf("\n[PONTE] *** Novo sentido da travessia: CONTINENTE -> ILHA. ***\n\n");
 	fflush(stdout);
-
-	sentidoAtual = CONTINENTE;
 }
 
 /* Função executada pelo veículo para ENTRAR em uma cabeceira da ponte. */
 void ponte_entrar(veiculo_t *v) {
 	
-	// ToDo: IMPLEMENTAR!
+	//dá wait no semaf 
 
-	if (v->cabeceira != sentidoAtual)
-	{
-		sem_wait(&semBin);
+	if (v->cabeceira == ILHA)
+	{	
+		sem_wait(&semIlha);
+
+	} else{
+		sem_wait(&semContinente);
+	
 	}
-	
-
-	sem_wait(&semPonte);
-	
+	// ToDo: IMPLEMENTAR!
 }
 
 /* Função executada pelo veículo para SAIR de uma cabeceira da ponte. */
@@ -75,19 +72,52 @@ void ponte_sair(veiculo_t *v) {
 
 	// ToDo: IMPLEMENTAR!
 
-	sem_post(&semPonte);
 
+	//troca sentido quando todos os veiculos saíram do sentido atual
 
-	/* Você deverá imprimir a nova direção da travessia quando for necessário! */	
-	printf("\n[PONTE] *** Novo sentido da travessia: %s -> %s. ***\n\n", cabeceiras[v->cabeceira], cabeceiras[!v->cabeceira]);
-	fflush(stdout);
+	//se ele é o último do sentido dele ele dá unlock
+
+	pthread_mutex_lock(&mutexCaeatano);
+
+	contadorSaida++;
+
+		if (contadorSaida == veiculos_turno)
+		{
+
+			contadorSaida = 0;
+			printf("\n[PONTE] *** Novo sentido da travessia: %s -> %s. ***\n\n", cabeceiras[v->cabeceira], cabeceiras[!v->cabeceira]);
+			fflush(stdout);
+
+			for (int i = 0; i < veiculos_turno; i++)
+			{
+				if (v->cabeceira == ILHA)
+				{
+					sem_post(&semIlha);
+				} else{
+					sem_post(&semContinente);
+				}
+				
+
+			}
+			
+		}
+		/* Você deverá imprimir a nova direção da travessia quando for necessário! */	
+		
+	pthread_mutex_unlock(&mutexCaeatano);
 }
+
+	
 
 /* FINALIZA a ponte. */
 void ponte_finalizar() {
 
 	// ToDo: IMPLEMENTAR!
-	
+
+	sem_destroy(&semContinente);
+	sem_destroy(&semIlha);
+
+	pthread_mutex_destroy(&mutexCaeatano);
+
 	/* Imprime fim da execução! */
 	printf("[PONTE] FIM!\n\n");
 	fflush(stdout);
@@ -99,6 +129,7 @@ void * veiculo_executa(void *arg) {
 	
 	printf("[Veiculo %3d] Aguardando para entrar na ponte pelo(a) %s.\n", v->id, cabeceiras[v->cabeceira]);
 	fflush(stdout);
+
 
 	/* Entra na ponte. */
 	ponte_entrar(v);
@@ -157,6 +188,7 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < total_veiculos; i++) {
 		pthread_join(veiculos[i].thread, NULL);
 	}
+
 
 	ponte_finalizar();
 
