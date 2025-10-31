@@ -23,13 +23,22 @@ void* caixa_func(void *arg);
 
 // Versão thread-safe da função transferir_unsafe.
 void transferir(conta_t *origem, conta_t *destino, double valor) {
-    pthread_mutex_lock(&origem->mutex);
-    pthread_mutex_lock(&destino->mutex);
 
+    if (origem->id < destino->id)
+    {
+        pthread_mutex_lock(&origem->mutex);
+        pthread_mutex_lock(&destino->mutex);
+
+    } else{
+
+        pthread_mutex_lock(&destino->mutex);
+        pthread_mutex_lock(&origem->mutex);
+    }
+    
     transferir_unsafe(origem, destino, valor);
 
-    pthread_mutex_unlock(&destino->mutex);
     pthread_mutex_unlock(&origem->mutex);
+    pthread_mutex_unlock(&destino->mutex);
     
 }
 
