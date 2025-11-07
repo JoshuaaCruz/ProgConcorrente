@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
     int n_threads = atoi(argv[1]);
     int size = argc > 2 ? atoi(argv[2]) : 20000000;
 
-    double *c = (double *) malloc (sizeof(d21243ouble) * size);
+    double *c = (double *) malloc (sizeof(double) * size);
     
     //Guarda ponto de início da computação
     double start = omp_get_wtime();
